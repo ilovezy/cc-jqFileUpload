@@ -1,0 +1,276 @@
+<!DOCTYPE HTML>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>jQuery File Upload Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="bootstrap-3.2.0-dist/css/bootstrap.min.css">
+    <!-- blueimp Gallery styles -->
+    <!--<link rel="stylesheet" href="css/blueimp-gallery.min.css">-->
+    <!-- CSS to style the file input field as button and adjust the Bootstrap progress bars -->
+    <link rel="stylesheet" href="css/jquery.fileupload.css">
+    <style type="text/css">
+    * {
+        border-radius: 0!important
+    }
+    
+    .label-danger {
+        padding-top: 5px!important
+    }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="text-center">jQuery File Upload 测试</h1>
+        <h2 class="lead">完整版</h2>
+        <ul class="nav nav-tabs">
+            <li><a href="basic.html">基础版（只有进度条无预览）</a></li>
+            <li><a href="basic-plus.html">带文件格式检测和图片预览</a></li>
+            <li class="active"><a href="index.html">图片预览，有删除暂停下载功能，整合了格式检测</a></li>
+        </ul>
+        <br>
+        <blockquote>
+            <p>File Upload widget with multiple file selection, drag&amp;drop support, progress bars, validation and preview images, audio and video for jQuery.
+                <br> Supports cross-domain, chunked and resumable file uploads and client-side image resizing.
+                <br> Works with any server-side platform (PHP, Python, Ruby on Rails, Java, Node.js, Go etc.) that supports standard HTML form file uploads.</p>
+            <p class="text-danger">这里需要注意一点中文名字的文件在上传的时候名字变成了乱码，目测是php文件的问题</p>
+            <p>图片上传完成之后可点击预览图进行全屏幻灯片，用的是 blueimp gallery 图片播放插件,这里我给删了这个功能</p>
+            <p>同样名字的文件上传会在名字后添加 （1）（2）这样的后缀，所以已上传文件列表是后台读取出来的</p>
+            <p>文件上传完毕后会从后台返回一个上传完毕文件信息的 object 对象，在 data.result.files 里可以循环读取</p>
+        </blockquote>
+        <br>
+        <!-- The file upload form used as target for the file upload widget -->
+        <form id="fileupload" method="POST" enctype="multipart/form-data">
+            <!-- The fileupload-buttonbar contains buttons to add/delete files and start/cancel the upload -->
+            <div class="row fileupload-buttonbar">
+                <div class="col-lg-7">
+                    <!-- The fileinput-button span is used to style the file input field as button -->
+                    <span class="btn btn-success fileinput-button">
+                    <i class="glyphicon glyphicon-plus"></i>
+                    <span>选择文件</span>
+                    <input type="file" name="files[]" multiple>
+                    </span>
+                    <button type="submit" class="btn btn-primary start">
+                        <i class="glyphicon glyphicon-upload"></i>
+                        <span>开始上传</span>
+                    </button>
+                    <button type="reset" class="btn btn-warning cancel">
+                        <i class="glyphicon glyphicon-ban-circle"></i>
+                        <span>取消上传</span>
+                    </button>
+                    <label>全选已上传的文件
+                        <input type="checkbox" class="toggle">
+                    </label>
+                    <button type="button" class="btn btn-danger delete">
+                        <i class="glyphicon glyphicon-trash"></i>
+                        <span>删除文件</span>
+                    </button>
+                    <!-- The global file processing state -->
+                    <span class="fileupload-process"></span>
+                </div>
+                <!-- The global progress state -->
+                <div class="col-lg-5 fileupload-progress fade">
+                    <!-- The global progress bar -->
+                    <div class="progress progress-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar progress-bar-success"></div>
+                    </div>
+                    <!-- The extended global progress state -->
+                    <div class="progress-extended">&nbsp;</div>
+                </div>
+            </div>
+            <!-- The table listing the files available for upload/download -->
+            <table role="presentation" class="table table-striped table-hover">
+                <tbody class="files"></tbody>
+            </table>
+        </form>
+        <br>
+        <div class="panel panel-warning">
+            <div class="panel-heading">
+                <h3 class="panel-title">注意事项</h3>
+            </div>
+            <div class="panel-body">
+                <ul>
+                    <li>默认文件被设置为最大 5MB 了</li>
+                    <li>默认情况下所有类型文件都可以上传，这里限制了只有jpg,jpeg,gif,png图片可以，其他限制有需要可以改</li>
+                    <li>可以直接拖拽要上传的文件到网页上上传，最好用chrome,firefox等现代浏览器</li>
+                    <li>去github上找更多资料 <a href="https://github.com/blueimp/jQuery-File-Upload">project website</a> and <a href="https://github.com/blueimp/jQuery-File-Upload/wiki">documentation</a></li>
+                    <li>用的bootstrap css架构</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <!-- The blueimp Gallery widget -->
+    <!--<div id="blueimp-gallery" class="blueimp-gallery blueimp-gallery-controls" data-filter=":even">
+    <div class="slides"></div>
+    <h3 class="title"></h3>
+    <a class="prev">‹</a>
+    <a class="next">›</a>
+    <a class="close">×</a>
+    <a class="play-pause"></a>
+    <ol class="indicator"></ol>
+</div>-->
+    <!-- The template to display files available for upload -->
+    <!-- 类似于 php的 夹杂 html 的写法，外包标签为 {%  %} -->
+    <script id="template-upload" type="text/x-tmpl">
+        {% for (var i=0, file; file=o.files[i]; i++) { %}
+        <tr class="template-upload fade">
+            <td>
+                <span class="preview"></span>
+            </td>
+            <td>
+                <p class="name">{%=file.name%}</p>
+                <strong class="error text-danger"></strong>
+            </td>
+            <td>
+                <p class="size">上传中...</p>
+                <div class="progress progress-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <div class="progress-bar progress-bar-success" style="width:0%;"></div>
+                </div>
+            </td>
+            <td>
+                {% if (!i && !o.options.autoUpload) { %}
+                <button class="btn btn-primary start" disabled>
+                    <i class="glyphicon glyphicon-upload"></i>
+                    <span>开始上传</span>
+                </button>
+                {% } %} {% if (!i) { %}
+                <button class="btn btn-warning cancel">
+                    <i class="glyphicon glyphicon-ban-circle"></i>
+                    <span>取消上传</span>
+                </button>
+                {% } %}
+            </td>
+        </tr>
+        {% } %}
+    </script>
+    <!-- The template to display files available for download -->
+    <script id="template-download" type="text/x-tmpl">
+        {% for (var i=0, file; file=o.files[i]; i++) { %}
+        <tr class="template-download fade">
+            <td>
+                <span class="preview">
+                {% if (file.thumbnailUrl) { %}
+                    <a href="{%=file.url%}" title="{%=file.name%}" download="{%=file.name%}" data-gallery><img src="{%=file.thumbnailUrl%}"></a>
+                {% } %}
+            </span>
+            </td>
+            <td>
+                <p class="name">
+                    {% if (file.url) { %}
+                    <a href="{%=file.url%}" title="{%=file.name%}" download="{%=file.name%}" {%=file.thumbnailUrl? 'data-gallery': ''%}>{%=file.name%}</a> {% } else { %}
+                    <span>{%=file.name%}</span> {% } %}
+                </p>
+                {% if (file.error) { %}
+                <div><span class="label label-danger">Error</span> {%=file.error%}</div>
+                {% } %}
+            </td>
+            <td>
+                <span class="size">{%=o.formatFileSize(file.size)%}</span>
+            </td>
+            <td>
+                {% if (file.deleteUrl) { %}
+                <button class="btn btn-danger delete" data-type="{%=file.deleteType%}" data-url="{%=file.deleteUrl%}" {% if (file.deleteWithCredentials) { %} data-xhr-fields='{"withCredentials":true}' {% } %}>
+                    <i class="glyphicon glyphicon-trash"></i>
+                    <span>删除文件</span>
+                </button>
+                <input type="checkbox" name="delete" value="1" class="toggle"> {% } else { %}
+                <button class="btn btn-warning cancel">
+                    <i class="glyphicon glyphicon-ban-circle"></i>
+                    <span>取消文件</span>
+                </button>
+                {% } %}
+            </td>
+        </tr>
+        {% } %}
+    </script>
+    <script src="jquery-1.11.1.min.js"></script>
+    <!-- The jQuery UI widget factory, can be omitted if jQuery UI is already included -->
+    <script src="js/vendor/jquery.ui.widget.js"></script>
+    <!-- The Templates plugin is included to render the upload/download listings -->
+    <script src="js/tmpl.min.js"></script>
+    <!-- The Load Image plugin is included for the preview images and image resizing functionality -->
+    <script src="js/load-image.all.min.js"></script>
+    <!-- The Canvas to Blob plugin is included for image resizing functionality -->
+    <script src="js/canvas-to-blob.min.js"></script>
+    <!-- bootstrap.js在这里只有导航条用到了，基本可以去掉 -->
+    <!--<script src="bootstrap-3.2.0-dist/js/bootstrap.min.js"></script>-->
+    <!-- blueimp Gallery script -->
+    <!--<script src="js/jquery.blueimp-gallery.min.js"></script>-->
+    <!-- The Iframe Transport is required for browsers without support for XHR file uploads -->
+    <script src="js/jquery.iframe-transport.js"></script>
+    <!-- The basic File Upload plugin -->
+    <script src="js/jquery.fileupload.js"></script>
+    <!-- The File Upload processing plugin -->
+    <script src="js/jquery.fileupload-process.js"></script>
+    <!-- The File Upload image preview & resize plugin -->
+    <script src="js/jquery.fileupload-image.js"></script>
+    <!-- The File Upload audio preview plugin -->
+    <script src="js/jquery.fileupload-audio.js"></script>
+    <!-- The File Upload video preview plugin -->
+    <script src="js/jquery.fileupload-video.js"></script>
+    <!-- The File Upload validation plugin -->
+    <script src="js/jquery.fileupload-validate.js"></script>
+    <!-- The File Upload user interface plugin -->
+    <script src="js/jquery.fileupload-ui.js"></script>
+    <!-- The main application script 这里我直接把main.js文件内容考到这里来了-->
+    <!-- <script src="js/main.js"></script> -->
+    <script type="text/javascript">
+    'use strict';
+
+    $(function() {
+        // Initialize the jQuery File Upload widget:
+        $('#fileupload').fileupload({
+            // 取消注释就可以发送跨域的 cookies 即 xhrFields: {widthCredentials: true}
+
+            // Uncomment the following to send cross-domain cookies:
+            //xhrFields: {withCredentials: true},
+            url: 'server/php/',
+            acceptFileTypes: /(\.|\/)(gif|jpe?g|png|txt|mp3|rar|flv)$/i,
+        });
+
+        // Enable iframe cross-domain access via redirect option: //跨域的时候域名重定向，注意这里是给定了三个参数
+        $('#fileupload').fileupload(
+            'option',
+            'redirect',
+            window.location.href.replace(
+                /\/[^\/]*$/,
+                '/cors/result.html?%s'
+            )
+        );
+
+
+        // Load existing files: // 在加载图片的时候会显示 .fileupload-processing 是一张正在加载的图，就在四个按钮的右边
+        $('#fileupload').addClass('fileupload-processing');
+        $.ajax({
+            // Uncomment the following to send cross-domain cookies:
+            //xhrFields: {withCredentials: true},
+            url: $('#fileupload').fileupload('option', 'url'),
+            dataType: 'json',
+            context: $('#fileupload')[0]
+        }).always(function() {
+            $(this).removeClass('fileupload-processing'); // 无论$.ajax()返回结果如何，都会取消这个加载图片
+        }).done(function(result) {
+            $(this).fileupload('option', 'done')
+                .call(this, $.Event('done'), {
+                    result: result
+                });
+        });
+
+        // 上传事件完成的回调
+        //	$('#fileupload').bind('fileuploaddone', function(e, data){
+        //		$.each(data.result.files, function(index, file){
+        //			/*for(var i in file){
+        //				//$('#returnData').append(i + ' : ' + file[i] + '<br />')
+        //
+        //			}*/
+        //			console.log(typeof file)
+        //			console.log(file)
+        //		})
+        //	})
+    });
+    </script>
+</body>
+
+</html>
